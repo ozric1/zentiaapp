@@ -1,30 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { QuizQuestion } from '../types';
+import { QuizScoreRecord } from '../src/types/progress';
 
 interface ProgressCheckProps {
     title: string;
     questions: QuizQuestion[];
     lessonId: number;
+    existingScore?: QuizScoreRecord | null;
+    onQuizSubmit?: (score: number, total: number, answers: Record<number, number>) => Promise<any> | void;
+    isCompleted?: boolean;
 }
 
-const ProgressCheck: React.FC<ProgressCheckProps> = ({ title, questions, lessonId }) => {
-    const [answers, setAnswers] = useState<{[key: number]: number}>({});
-    const [showResults, setShowResults] = useState(false);
-    const [score, setScore] = useState(0);
+const ProgressCheck: React.FC<ProgressCheckProps> = ({
+    title,
+    questions,
+    lessonId,
+    existingScore,
+    onQuizSubmit,
+    isCompleted
+}) => {
+    const [answers, setAnswers] = useState<{ [key: number]: number }>(() => existingScore?.answers || {});
+    const [showResults, setShowResults] = useState<boolean>(() => !!existingScore || !!isCompleted);
+    const [score, setScore] = useState<number>(() => existingScore?.score || 0);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-    // Reset state when lesson changes
+    // Sync state when lesson or existingScore changes
     useEffect(() => {
-        setAnswers({});
-        setShowResults(false);
-        setScore(0);
-    }, [lessonId]);
+        if (existingScore) {
+            setAnswers(existingScore.answers || {});
+            setShowResults(true);
+            setScore(existingScore.score);
+        } else {
+            setAnswers({});
+            setShowResults(false);
+            setScore(0);
+        }
+    }, [lessonId, existingScore]);
 
     const handleSelect = (qId: number, optionIdx: number) => {
         if (showResults) return; // Prevent changing after submission
-        setAnswers(prev => ({...prev, [qId]: optionIdx}));
+        setAnswers(prev => ({ ...prev, [qId]: optionIdx }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         let newScore = 0;
         questions.forEach(q => {
             if (answers[q.id] === q.correctAnswer) {
@@ -33,21 +51,38 @@ const ProgressCheck: React.FC<ProgressCheckProps> = ({ title, questions, lessonI
         });
         setScore(newScore);
         setShowResults(true);
+
+        if (onQuizSubmit) {
+            setIsSubmitting(true);
+            try {
+                await onQuizSubmit(newScore, questions.length, answers);
+            } catch (err) {
+                console.error('Failed to submit quiz score:', err);
+            } finally {
+                setIsSubmitting(false);
+            }
+        }
+    };
+
+    const handleRetake = () => {
+        setShowResults(false);
+        setAnswers({});
+        setScore(0);
     };
 
     const getScoreColor = () => {
-        const percentage = (score / questions.length) * 100;
+        const percentage = Math.round((score / (questions.length || 1)) * 100);
         if (percentage >= 80) return 'text-green-600';
         if (percentage >= 60) return 'text-amber-600';
         return 'text-red-600';
     };
 
     const getScoreMessage = () => {
-        const percentage = (score / questions.length) * 100;
-        if (percentage === 100) return "Outstanding. You have mastered this module.";
-        if (percentage >= 80) return "Excellent work. You are ready to proceed.";
-        if (percentage >= 60) return "Good, but review the explanations for missed questions.";
-        return "We recommend reviewing the module units before proceeding.";
+        const percentage = Math.round((score / (questions.length || 1)) * 100);
+        if (percentage === 100) return 'Outstanding. You have mastered this module.';
+        if (percentage >= 80) return 'Excellent work. You are ready to proceed.';
+        if (percentage >= 60) return 'Good, but review the explanations for missed questions.';
+        return 'We recommend reviewing the module units before proceeding.';
     };
 
     return (
@@ -63,8 +98,7 @@ const ProgressCheck: React.FC<ProgressCheckProps> = ({ title, questions, lessonI
             <div className="space-y-8">
                 {questions.map((q, idx) => {
                     const isCorrect = answers[q.id] === q.correctAnswer;
-                    const isAnswered = answers[q.id] !== undefined;
-                    
+
                     return (
                         <div key={q.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                             <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
@@ -81,26 +115,26 @@ const ProgressCheck: React.FC<ProgressCheckProps> = ({ title, questions, lessonI
 
                                 <div className="space-y-3">
                                     {q.options.map((opt, optIdx) => {
-                                        let btnClass = "w-full text-left p-4 rounded-lg border transition-all duration-200 flex items-center ";
-                                        
+                                        let btnClass = 'w-full text-left p-4 rounded-lg border transition-all duration-200 flex items-center ';
+
                                         if (showResults) {
                                             if (optIdx === q.correctAnswer) {
-                                                btnClass += "bg-green-50 border-green-500 text-green-900 font-bold";
+                                                btnClass += 'bg-green-50 border-green-500 text-green-900 font-bold';
                                             } else if (answers[q.id] === optIdx) {
-                                                btnClass += "bg-red-50 border-red-500 text-red-900 opacity-70";
+                                                btnClass += 'bg-red-50 border-red-500 text-red-900 opacity-70';
                                             } else {
-                                                btnClass += "bg-white border-slate-200 text-slate-400 opacity-50";
+                                                btnClass += 'bg-white border-slate-200 text-slate-400 opacity-50';
                                             }
                                         } else {
                                             if (answers[q.id] === optIdx) {
-                                                btnClass += "bg-blue-50 border-blue-500 text-blue-900 shadow-md ring-1 ring-blue-500";
+                                                btnClass += 'bg-blue-50 border-blue-500 text-blue-900 shadow-md ring-1 ring-blue-500';
                                             } else {
-                                                btnClass += "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300";
+                                                btnClass += 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300';
                                             }
                                         }
 
                                         return (
-                                            <button 
+                                            <button
                                                 key={optIdx}
                                                 onClick={() => handleSelect(q.id, optIdx)}
                                                 disabled={showResults}
@@ -135,12 +169,18 @@ const ProgressCheck: React.FC<ProgressCheckProps> = ({ title, questions, lessonI
 
             {!showResults ? (
                 <div className="mt-10 text-center">
-                    <button 
+                    <button
                         onClick={handleSubmit}
-                        disabled={Object.keys(answers).length !== questions.length}
+                        disabled={Object.keys(answers).length !== questions.length || isSubmitting}
                         className="bg-slate-900 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
                     >
-                        Submit Assessment
+                        {isSubmitting ? (
+                            <span className="flex items-center gap-2">
+                                <i className="fa-solid fa-spinner fa-spin"></i> Saving Score...
+                            </span>
+                        ) : (
+                            'Submit Assessment'
+                        )}
                     </button>
                     {Object.keys(answers).length !== questions.length && (
                         <p className="text-slate-400 text-xs mt-3 uppercase tracking-wide">Please answer all questions</p>
@@ -150,15 +190,24 @@ const ProgressCheck: React.FC<ProgressCheckProps> = ({ title, questions, lessonI
                 <div className="mt-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-200 text-center animate-in zoom-in duration-300">
                     <p className="text-slate-500 uppercase tracking-widest font-bold text-xs mb-2">Final Score</p>
                     <div className={`text-5xl font-black mb-4 ${getScoreColor()}`}>
-                        {Math.round((score / questions.length) * 100)}%
+                        {Math.round((score / (questions.length || 1)) * 100)}%
                     </div>
                     <p className="text-xl font-serif text-slate-800 mb-6">{getScoreMessage()}</p>
-                    <button 
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="text-blue-600 font-bold hover:underline"
-                    >
-                        Review Answers
-                    </button>
+                    <div className="flex justify-center items-center gap-4">
+                        <button
+                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                            className="text-blue-600 font-bold hover:underline"
+                        >
+                            Review Answers
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                            onClick={handleRetake}
+                            className="text-slate-600 font-medium hover:text-slate-900 hover:underline"
+                        >
+                            Retake Assessment
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

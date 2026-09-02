@@ -3,26 +3,35 @@ import React from 'react';
 interface SidebarProps {
     currentLesson: number;
     onSelectLesson: (id: number) => void;
+    completedLessons?: number[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentLesson, onSelectLesson }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentLesson, onSelectLesson, completedLessons = [] }) => {
     
-    const NavItem = ({ id, icon, label, isCheck }: { id: number; icon: string; label: string; isCheck?: boolean }) => (
-        <div 
-            onClick={() => onSelectLesson(id)}
-            className={`
-                px-4 py-3 rounded-md cursor-pointer transition-all duration-200 flex items-center gap-3 mb-1 text-sm
-                ${currentLesson === id 
-                    ? 'bg-blue-600 text-white font-semibold shadow-lg shadow-blue-900/50' 
-                    : isCheck 
-                        ? 'text-amber-400 hover:bg-slate-800 hover:text-amber-300 font-medium' 
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
-            `}
-        >
-            <i className={`${icon} w-5 text-center ${isCheck ? 'animate-pulse' : ''}`}></i>
-            <span className="truncate">{label}</span>
-        </div>
-    );
+    const NavItem = ({ id, icon, label, isCheck }: { id: number; icon: string; label: string; isCheck?: boolean }) => {
+        const isCompleted = completedLessons.includes(id);
+        const isActive = currentLesson === id;
+
+        return (
+            <div 
+                onClick={() => onSelectLesson(id)}
+                className={`
+                    px-4 py-3 rounded-md cursor-pointer transition-all duration-200 flex items-center gap-3 mb-1 text-sm
+                    ${isActive 
+                        ? 'bg-blue-600 text-white font-semibold shadow-lg shadow-blue-900/50' 
+                        : isCheck 
+                            ? 'text-amber-400 hover:bg-slate-800 hover:text-amber-300 font-medium' 
+                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+                `}
+            >
+                <i className={`${icon} w-5 text-center ${isCheck && !isCompleted ? 'animate-pulse' : ''}`}></i>
+                <span className="truncate flex-1">{label}</span>
+                {isCompleted && (
+                    <i className="fa-solid fa-circle-check text-green-400 text-xs ml-auto shrink-0" title="Completed"></i>
+                )}
+            </div>
+        );
+    };
 
     const GroupTitle = ({ title }: { title: string }) => (
         <div className="text-[0.65rem] uppercase tracking-wider font-bold text-slate-500 mt-6 mb-2 ml-4">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
     Briefcase, 
     MessageSquare, 
@@ -9,32 +10,66 @@ import {
     ArrowRight,
     Users,
     Video,
-    ShieldCheck
+    ShieldCheck,
+    LayoutDashboard,
+    User as UserIcon
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
+    const { currentUser } = useAuth();
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
             {/* Navigation */}
             <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
-                        <div className="flex items-center gap-2">
+                        <Link to="/" className="flex items-center gap-2">
                             <div className="w-10 h-10 bg-blue-900 rounded-lg flex items-center justify-center text-white font-bold text-xl">
                                 Z
                             </div>
                             <span className="font-bold text-2xl tracking-tight text-blue-900">Zentia</span>
-                        </div>
+                        </Link>
                         <div className="hidden md:flex space-x-8">
-                            <a href="#" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">For Corporates</a>
-                            <a href="#" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">For Trainers</a>
-                            <Link to="/dashboard" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">AI Dashboard</Link>
+                            <a href="#marketplace" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">Programs</a>
+                            <a href="#how-it-works" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">For Corporates</a>
+                            <a href="#how-it-works" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">For Trainers</a>
+                            <Link to="/dashboard" className="text-slate-600 hover:text-blue-600 font-medium transition-colors flex items-center gap-1.5">
+                                <LayoutDashboard size={16} />
+                                <span>AI Dashboard</span>
+                            </Link>
                         </div>
                         <div className="flex items-center gap-4">
-                            <button className="text-slate-600 font-medium hover:text-blue-600 hidden md:block">Log in</button>
-                            <button className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-all shadow-md hover:shadow-lg">
-                                Get Started
-                            </button>
+                            {currentUser ? (
+                                <div className="flex items-center gap-3">
+                                    <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                                        <UserIcon size={14} className="text-blue-600" />
+                                        <span>{currentUser.displayName || currentUser.email}</span>
+                                    </div>
+                                    <Link
+                                        to="/dashboard"
+                                        className="bg-blue-600 text-white px-5 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-1.5 text-sm"
+                                    >
+                                        <span>Dashboard</span>
+                                        <ArrowRight size={16} />
+                                    </Link>
+                                </div>
+                            ) : (
+                                <>
+                                    <Link
+                                        to="/login"
+                                        className="text-slate-600 font-medium hover:text-blue-600 hidden md:block"
+                                    >
+                                        Sign In
+                                    </Link>
+                                    <Link
+                                        to="/login"
+                                        className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm"
+                                    >
+                                        Get Started
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -56,19 +91,34 @@ const LandingPage: React.FC = () => {
                             Connecting forward-thinking corporates with world-class expert trainers for impactful, AI-enhanced learning experiences.
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <button className="bg-white text-blue-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-100 transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2">
-                                Find a Program <ArrowRight size={20} />
-                            </button>
-                            <button className="bg-blue-800/40 text-white border border-blue-700/50 px-8 py-4 rounded-full font-bold text-lg hover:bg-blue-800/60 transition-all backdrop-blur-sm">
-                                Become a Trainer
-                            </button>
+                            {currentUser ? (
+                                <Link
+                                    to="/programs/business-english"
+                                    className="bg-white text-blue-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-100 transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2"
+                                >
+                                    Resume Business English <ArrowRight size={20} />
+                                </Link>
+                            ) : (
+                                <Link
+                                    to="/login"
+                                    className="bg-white text-blue-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-100 transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2"
+                                >
+                                    Start Learning <ArrowRight size={20} />
+                                </Link>
+                            )}
+                            <a
+                                href="#marketplace"
+                                className="bg-blue-800/40 text-white border border-blue-700/50 px-8 py-4 rounded-full font-bold text-lg hover:bg-blue-800/60 transition-all backdrop-blur-sm flex items-center justify-center"
+                            >
+                                Explore Programs
+                            </a>
                         </div>
                     </div>
                 </div>
             </section>
 
             {/* Platform Value Proposition */}
-            <section className="py-20 bg-white">
+            <section id="how-it-works" className="py-20 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl font-bold text-slate-900 mb-4">How Zentia Works</h2>
@@ -102,16 +152,16 @@ const LandingPage: React.FC = () => {
             </section>
 
             {/* Programs Marketplace */}
-            <section className="py-24 bg-slate-50 border-t border-slate-200">
+            <section id="marketplace" className="py-24 bg-slate-50 border-t border-slate-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-end mb-12">
                         <div>
                             <h2 className="text-4xl font-bold text-slate-900 mb-4">Featured Programs</h2>
                             <p className="text-lg text-slate-600 max-w-2xl">Browse our curated selection of high-impact corporate training programs.</p>
                         </div>
-                        <button className="hidden md:flex text-blue-600 font-semibold items-center gap-2 hover:text-blue-700">
+                        <a href="#marketplace" className="hidden md:flex text-blue-600 font-semibold items-center gap-2 hover:text-blue-700">
                             View All <ArrowRight size={18} />
-                        </button>
+                        </a>
                     </div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">

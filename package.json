@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node tests/runner.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
+    "firebase": "^11.4.0",
     "lucide-react": "^1.11.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

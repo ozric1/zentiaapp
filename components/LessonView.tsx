@@ -8,11 +8,15 @@ import ChartVisual from './ChartVisual';
 import IntroView from './IntroView';
 import ProgressCheck from './ProgressCheck';
 
+import { QuizScoreRecord } from '../src/types/progress';
+
 interface LessonViewProps {
     data: LessonData;
     lessonId: number;
     onComplete?: () => void;
     isCompleted?: boolean;
+    existingQuizScore?: QuizScoreRecord | null;
+    onQuizSubmit?: (score: number, total: number, answers: Record<number, number>) => Promise<any> | void;
 }
 
 const ExpressionBankSection: React.FC<{ data: ExpressionBank }> = ({ data }) => (
@@ -55,7 +59,14 @@ const ExpressionBankSection: React.FC<{ data: ExpressionBank }> = ({ data }) => 
     </div>
 );
 
-const LessonView: React.FC<LessonViewProps> = ({ data, lessonId, onComplete, isCompleted }) => {
+const LessonView: React.FC<LessonViewProps> = ({
+    data,
+    lessonId,
+    onComplete,
+    isCompleted,
+    existingQuizScore,
+    onQuizSubmit
+}) => {
     
     // Intro View Wrapper
     if (data.type === 'intro') {
@@ -79,7 +90,14 @@ const LessonView: React.FC<LessonViewProps> = ({ data, lessonId, onComplete, isC
     if (data.type === 'quiz' && data.quiz) {
         return (
             <div className="flex flex-col h-full">
-                <ProgressCheck title={data.title} questions={data.quiz} lessonId={lessonId} />
+                <ProgressCheck
+                    title={data.title}
+                    questions={data.quiz}
+                    lessonId={lessonId}
+                    existingScore={existingQuizScore}
+                    onQuizSubmit={onQuizSubmit}
+                    isCompleted={isCompleted}
+                />
                 <div className="mt-12 flex justify-center pb-24">
                     <button 
                         onClick={onComplete}

@@ -1,35 +1,77 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import LessonView from '../../components/LessonView';
 import ChatWidget from '../../components/ChatWidget';
 import { COURSE_DATA } from '../../constants';
-import { Link } from 'react-router-dom';
+import { useProgress } from '../context/ProgressContext';
+import { useAuth } from '../context/AuthContext';
+
+const CURRICULUM_SEQUENCE = [
+    0, 
+    1, 2, 3, 101, 
+    4, 5, 6, 102, 
+    7, 8, 103, 
+    9, 10, 11, 12, 104, 
+    13, 14, 15, 105
+];
 
 const CourseViewer: React.FC = () => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { currentUser } = useAuth();
+    const {
+        progress,
+        completedLessons,
+        quizScores,
+        saveCurrentLesson,
+        markLessonCompleted,
+        saveQuizScore,
+        syncing
+    } = useProgress();
 
-    // 1. Initialize State from LocalStorage for persistence
+    // 1. Resolve initial lesson from URL param (?lesson=ID) or progress
+    const urlLesson = searchParams.get('lesson');
     const [currentLessonId, setCurrentLessonId] = useState<number>(() => {
-        const saved = localStorage.getItem('zentia_last_lesson');
-        return saved ? parseInt(saved, 10) : 0;
-    });
-
-    const [completedLessons, setCompletedLessons] = useState<number[]>(() => {
-        const saved = localStorage.getItem('zentia_completed');
-        return saved ? JSON.parse(saved) : [];
+        if (urlLesson !== null) {
+            const parsed = parseInt(urlLesson, 10);
+            if (!isNaN(parsed) && COURSE_DATA[parsed]) {
+                return parsed;
+            }
+        }
+        if (progress?.lastLessonId !== undefined && COURSE_DATA[progress.lastLessonId]) {
+            return progress.lastLessonId;
+        }
+        return 0;
     });
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    
-    // 2. Persist state changes
-    useEffect(() => {
-        localStorage.setItem('zentia_last_lesson', currentLessonId.toString());
-    }, [currentLessonId]);
 
+    // 2. Sync active lesson when URL search param changes
     useEffect(() => {
-        localStorage.setItem('zentia_completed', JSON.stringify(completedLessons));
-    }, [completedLessons]);
+        if (urlLesson !== null) {
+            const parsed = parseInt(urlLesson, 10);
+            if (!isNaN(parsed) && COURSE_DATA[parsed] && parsed !== currentLessonId) {
+                setCurrentLessonId(parsed);
+            }
+        }
+    }, [urlLesson, currentLessonId]);
 
+    // 3. Sync lesson from cloud progress on initial load if URL param is absent
+    useEffect(() => {
+        if (urlLesson === null && progress?.lastLessonId !== undefined && COURSE_DATA[progress.lastLessonId]) {
+            setCurrentLessonId(progress.lastLessonId);
+        }
+    }, [progress?.lastLessonId, urlLesson]);
+
+    // 4. Persist active lesson position in background
+    useEffect(() => {
+        if (currentLessonId !== undefined) {
+            saveCurrentLesson(currentLessonId).catch(console.error);
+        }
+    }, [currentLessonId, saveCurrentLesson]);
+
+    // 5. Scroll container to top when lesson changes
     useEffect(() => {
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = 0;
@@ -40,32 +82,35 @@ const CourseViewer: React.FC = () => {
 
     const handleLessonSelect = (id: number) => {
         setCurrentLessonId(id);
+        setSearchParams({ lesson: id.toString() });
         setIsMobileMenuOpen(false);
     };
 
-    const handleLessonComplete = () => {
-        // Mark current as complete if not already
-        if (!completedLessons.includes(currentLessonId)) {
-            setCompletedLessons(prev => [...prev, currentLessonId]);
-        }
+    const handleLessonComplete = async () => {
+        // Mark current lesson as completed in Firestore
+        await markLessonCompleted(currentLessonId);
 
-        // Logic to find next lesson
-        const sequence = [
-            0, 
-            1, 2, 3, 101, 
-            4, 5, 6, 102, 
-            7, 8, 103, 
-            9, 10, 11, 12, 104, 
-            13, 14, 15, 105
-        ];
-
-        const currentIndex = sequence.indexOf(currentLessonId);
-        if (currentIndex !== -1 && currentIndex < sequence.length - 1) {
-            const nextId = sequence[currentIndex + 1];
+        // Advance to next lesson in curriculum sequence
+        const currentIndex = CURRICULUM_SEQUENCE.indexOf(currentLessonId);
+        if (currentIndex !== -1 && currentIndex < CURRICULUM_SEQUENCE.length - 1) {
+            const nextId = CURRICULUM_SEQUENCE[currentIndex + 1];
             setCurrentLessonId(nextId);
+            setSearchParams({ lesson: nextId.toString() });
+            await saveCurrentLesson(nextId);
         } else {
-            // Course finished
             alert("Congratulations! You have completed the entire Zentia World Executive Program.");
+        }
+    };
+
+    const handleQuizSubmit = async (
+        score: number,
+        total: number,
+        answers: Record<number, number>
+    ) => {
+        await saveQuizScore(currentLessonId, score, total, answers);
+        const percentage = Math.round((score / (total || 1)) * 100);
+        if (percentage >= 80) {
+            await markLessonCompleted(currentLessonId);
         }
     };
 
@@ -79,7 +124,10 @@ const CourseViewer: React.FC = () => {
                     <h2 className="text-xl font-bold text-slate-900 mb-2">Lesson Data Not Found</h2>
                     <p className="text-slate-600 mb-6">Could not load content for Lesson ID: {currentLessonId}</p>
                     <button 
-                        onClick={() => { setCurrentLessonId(0); window.location.reload(); }}
+                        onClick={() => {
+                            setCurrentLessonId(0);
+                            setSearchParams({ lesson: '0' });
+                        }}
                         className="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-colors"
                     >
                         Return to Introduction
@@ -88,6 +136,15 @@ const CourseViewer: React.FC = () => {
             </div>
         );
     }
+
+    const isLessonCompleted = completedLessons.includes(currentLessonId);
+    const existingQuizScore = quizScores[currentLessonId] || quizScores[currentLessonId.toString()] || null;
+
+    const userInitials = currentUser?.displayName
+        ? currentUser.displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+        : currentUser?.email
+            ? currentUser.email.slice(0, 2).toUpperCase()
+            : 'EX';
 
     return (
         <div className="flex w-full h-screen bg-slate-50 relative">
@@ -134,9 +191,9 @@ const CourseViewer: React.FC = () => {
                         >
                             <i className="fa-solid fa-bars text-xl"></i>
                         </button>
-                        <Link to="/" className="hidden md:flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors mr-4">
+                        <Link to="/dashboard" className="hidden md:flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors mr-4">
                             <i className="fa-solid fa-arrow-left"></i>
-                            Marketplace
+                            Dashboard
                         </Link>
                         <h2 className="text-sm md:text-lg font-bold text-slate-800 truncate border-l pl-4 border-slate-200">
                             {lessonData.title}
@@ -144,17 +201,28 @@ const CourseViewer: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                        {completedLessons.includes(currentLessonId) && (
+                        {syncing && (
+                            <span className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 animate-pulse">
+                                <i className="fa-solid fa-cloud-arrow-up text-blue-500"></i> Syncing...
+                            </span>
+                        )}
+                        {isLessonCompleted && (
                             <span className="hidden sm:flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-200 animate-in fade-in">
                                 <i className="fa-solid fa-circle-check"></i> COMPLETED
                             </span>
                         )}
-                        <button className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-2">
-                            <i className="fa-regular fa-folder-open"></i>
-                            <span className="hidden sm:inline">Resources</span>
-                        </button>
-                        <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs border border-blue-200 shadow-sm cursor-pointer hover:bg-blue-200 transition-colors">
-                            TR
+                        <Link
+                            to="/dashboard"
+                            className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-2"
+                        >
+                            <i className="fa-solid fa-gauge-high"></i>
+                            <span className="hidden sm:inline">Overview</span>
+                        </Link>
+                        <div
+                            title={currentUser?.email || 'Executive Learner'}
+                            className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs border border-blue-200 shadow-sm cursor-pointer hover:bg-blue-200 transition-colors"
+                        >
+                            {userInitials}
                         </div>
                     </div>
                 </header>
@@ -165,7 +233,9 @@ const CourseViewer: React.FC = () => {
                         data={lessonData} 
                         lessonId={currentLessonId} 
                         onComplete={handleLessonComplete}
-                        isCompleted={completedLessons.includes(currentLessonId)}
+                        isCompleted={isLessonCompleted}
+                        existingQuizScore={existingQuizScore}
+                        onQuizSubmit={handleQuizSubmit}
                     />
                 </div>
             </main>

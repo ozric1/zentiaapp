@@ -97,3 +97,5 @@ export interface LessonData {
 export interface CourseData {
     [key: number]: LessonData;
 }
+
+export * from './src/types/progress';
