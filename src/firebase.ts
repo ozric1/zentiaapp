@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDummyKeyForZentiaExecutiveAppDemo2026',
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'zentia-573f8.firebaseapp.com',
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'zentia-573f8',
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'zentia-573f8.firebasestorage.app',
