@@ -325,17 +325,21 @@ export class ProgressService {
         };
         const stats = ProgressCalculator.calculateStats(updatedCompleted, updatedQuizScores);
 
+        const updatePayload: Record<string, any> = {
+            [`quizScores.${quizId}`]: quizEntry,
+            quizScores: updatedQuizScores,
+            stats,
+            lastUpdated: new Date().toISOString(),
+            updatedAt: serverTimestamp(),
+        };
+
+        if (passed) {
+            updatePayload.completedLessons = arrayUnion(quizId);
+        }
+
         await setDoc(
             docRef,
-            {
-                completedLessons: updatedCompleted,
-                [`quizScores.${quizId}`]: quizEntry,
-                quizScores: updatedQuizScores,
-                lastLessonId: quizId,
-                stats,
-                lastUpdated: new Date().toISOString(),
-                updatedAt: serverTimestamp(),
-            },
+            updatePayload,
             { merge: true }
         );
 

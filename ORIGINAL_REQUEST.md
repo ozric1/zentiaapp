@@ -35,3 +35,40 @@ Enhance the Learner Dashboard to fetch and display the authenticated user's real
 ### Dashboard & Navigation
 - [ ] The dashboard successfully retrieves and flawlessly displays the logged-in user's data.
 - [ ] A "Continue Learning" button successfully routes the user to their next uncompleted lesson.
+
+## Follow-up - 2026-09-29T21:59:40Z
+
+# Teamwork Project Prompt — Draft
+
+> Requested team: Use a very large team of agents.
+
+Build a mobile-first executive training application for Zentia with a freemium and 3-tier subscription model, integrating AI roleplay, audio-first modules, and automated B2B onboarding.
+
+Working directory: c:/Users/USER/OneDrive/Desktop/Projects/zentia-mobile
+Integrity mode: demo
+
+## Requirements
+
+### R1. Native App Infrastructure & Freemium Content
+Initialize a new React Native (Expo) application. Implement the 15-module curriculum structure. Ensure Module 1 is completely free and accessible without a subscription to act as the top-of-funnel hook. Connect the app to Firebase for user authentication and data persistence.
+
+### R2. Subscription Tiers & Audio Mode (Tier 1)
+Integrate RevenueCat to handle paywalls and subscription state. Implement Tier 1 which unlocks all 15 modules and an "Audio-First Executive Mode" that allows users to listen to lessons seamlessly on mobile.
+
+### R3. AI Executive Roleplay Simulator (Tier 2)
+Implement a higher-priced Tier 2 that unlocks an AI coaching feature. Use the OpenAI API to build an interactive roleplay simulator where executives can practice pitches and receive automated structural feedback via text or voice.
+
+### R4. B2B Seat Management
+Create an automated onboarding flow where corporate buyers can upload a CSV of employees to grant them bulk access to the platform without manual admin intervention.
+
+## Acceptance Criteria
+
+### Infrastructure & Monetization
+- [ ] The app successfully compiles and runs via Expo.
+- [ ] Users can create an account via Firebase Auth.
+- [ ] RevenueCat paywalls correctly block access to Modules 2-15 for non-subscribed users while keeping Module 1 free.
+
+### Core Features
+- [ ] The Audio-First Executive mode successfully plays lesson content.
+- [ ] The Tier 2 AI Simulator accepts text prompts and returns contextual coaching feedback using the OpenAI API.
+- [ ] The B2B onboarding feature successfully parses a CSV file of emails and generates access records in the database.

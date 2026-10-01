@@ -75,7 +75,13 @@ const CourseViewer: React.FC = () => {
     useEffect(() => {
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = 0;
+            try {
+                scrollContainerRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+            } catch {
+                scrollContainerRef.current.scrollTop = 0;
+            }
         }
+        window.scrollTo({ top: 0, left: 0 });
     }, [currentLessonId]);
 
     const lessonData = COURSE_DATA[currentLessonId];
@@ -84,6 +90,9 @@ const CourseViewer: React.FC = () => {
         setCurrentLessonId(id);
         setSearchParams({ lesson: id.toString() });
         setIsMobileMenuOpen(false);
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+        }
     };
 
     const handleLessonComplete = async () => {
@@ -96,6 +105,9 @@ const CourseViewer: React.FC = () => {
             const nextId = CURRICULUM_SEQUENCE[currentIndex + 1];
             setCurrentLessonId(nextId);
             setSearchParams({ lesson: nextId.toString() });
+            if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTop = 0;
+            }
             await saveCurrentLesson(nextId);
         } else {
             alert("Congratulations! You have completed the entire Zentia World Executive Program.");

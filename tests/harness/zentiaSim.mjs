@@ -222,12 +222,15 @@ export class ProgressService {
     const stats = ProgressCalculator.calculateStats(Array.from(completed), updatedQuizScores);
 
     const updatePayload = {
-      completedLessons: Array.from(completed),
       [`quizScores.${quizId}`]: quizEntry,
       quizScores: updatedQuizScores,
       stats,
       updatedAt: serverTimestamp(),
     };
+
+    if (passed) {
+      updatePayload.completedLessons = arrayUnion(quizId);
+    }
 
     await setDoc(docRef, updatePayload, { merge: true });
     return quizEntry;
